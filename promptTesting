@@ -1,0 +1,76 @@
+import random
+
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+from datasets import load_dataset
+import pandas as pd
+
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
+print(device)
+torch.cuda.empty_cache()
+
+train_dataset = pd.read_csv("english_train_short.tsv", dtype=object, encoding="utf-8", sep='\t')
+dev_dataset = pd.read_csv("english_train_short.tsv", dtype=object, encoding="utf-8", sep='\t')
+
+# Load a pre-trained GPT-2 model and tokenizer
+model_name = "gpt2"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name)
+
+
+def create_prompt(new_sentence, examples):
+    prompt = "Classify the following sentences into one of the categories: No, Yes.\n"
+    for i, example in enumerate(examples):
+        prompt += f"{i + 1}. Sentence: \"{example['Text']}\"\n   Classification: {example['label']}\n"
+    prompt += f"\nNow classify the following sentence:\nSentence: \"{new_sentence}\"\nClassification:"
+    return prompt
+
+
+def classify_sentence(prompt):
+    inputs = tokenizer(prompt, return_tensors="pt")
+    output = model.generate(**inputs, max_length=inputs['input_ids'].shape[1] + 1, num_return_sequences=1)
+
+    # Decode the generated text
+    generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
+
+    # Extract the classification from the generated text
+    classification = generated_text.split('Classification:')[-1].strip().split()[0]
+    return classification
+
+
+list_examples = []
+# Example usage with sampled examples
+
+
+#print("your_dataset\n", your_dataset)
+for i, r in train_dataset.iterrows():
+    new_sentence = {"Text": r.Text, "label": r.label}
+    list_examples.append(new_sentence)
+
+sampled_examples = random.sample(list_examples, 3)
+print(sampled_examples)
+
+#print("samples:\n", sampled_examples)
+
+new_sentence = "He's been a professor for a long time at a great school."
+prompt = create_prompt(new_sentence, sampled_examples)
+classification = classify_sentence(prompt)
+print(f"Predicted classification: {classification}")
+
+new_sentence = "Well, there's seven million people that contracted COVID."
+prompt = create_prompt(new_sentence, sampled_examples)
+classification = classify_sentence(prompt)
+print(f"Predicted classification: {classification}")
+
+a = 0
+
+for i, r in dev_dataset.iterrows():
+    sampled_examples = random.sample(list_examples, 3)
+    #print(sampled_examples)
+    prompt = create_prompt(r.Text, sampled_examples)
+    classification = classify_sentence(prompt)
+    #print(f"Sentence: {r.Text} \n Predicted classification: {classification} \n Actual classification: {r.label}")
+    if classification != r.label:
+        a + 1
+
+print("number of errors: ", a)
