@@ -2,7 +2,6 @@ import random
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
-from datasets import load_dataset
 import pandas as pd
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
