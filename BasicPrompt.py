@@ -2,12 +2,13 @@ import random
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
-from datasets import load_dataset
+#from datasets import load_dataset
 import pandas as pd
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 print(device)
 torch.cuda.empty_cache()
+optimizer = torch.optim.SGD
 
 train_dataset = pd.read_csv("Data/CT24_checkworthy_english_dev.tsv", dtype=object, encoding="utf-8", sep='\t')
 test_dataset = pd.read_csv("Data/CT24_checkworthy_english_dev-test.tsv", dtype=object, encoding="utf-8", sep='\t')
@@ -32,7 +33,6 @@ def classify_sentence(prompt):
 
     # Decode the generated text
     generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
-
     # Extract the classification from the generated text
     classification = generated_text.split('Classification:')[-1].strip().split()[0]
     return classification
