@@ -11,10 +11,9 @@ torch.cuda.empty_cache()
 train_dataset = pd.read_csv("Data/CT24_checkworthy_english_dev.tsv", dtype=object, encoding="utf-8", sep='\t')
 test_dataset = pd.read_csv("Data/CT24_checkworthy_english_dev-test.tsv", dtype=object, encoding="utf-8", sep='\t')
 
-# Load a pre-trained GPT-2 model and tokenizer
-model_name = "gpt2"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name)
+# Load a model and tokenizer
+tokenizer = AutoTokenizer.from_pretrained("bigscience/bloom")
+model = AutoModelForCausalLM.from_pretrained("bigscience/bloom")
 
 
 def create_prompt(new_sentence, examples_yes, examples_no):
@@ -52,28 +51,17 @@ for i, r in train_dataset.iterrows():
         list_examples_yes.append(new_sentence)
     if r.class_label == "No":
         list_examples_no.append(new_sentence)
-print(len(list_examples_yes))
-print(len(list_examples_no))
 
-'''
-sampled_examples_yes = random.sample(list_examples_yes, 3)
-sampled_examples_no = random.sample(list_examples_no, 3)
-
-new_sentence = "He's been a professor for a long time at a great school."
-prompt = create_prompt(new_sentence, sampled_examples_yes, sampled_examples_no)
-classification = classify_sentence(prompt)
-
-new_sentence = "Well, there's seven million people that contracted COVID."
-prompt = create_prompt(new_sentence, sampled_examples_yes, sampled_examples_no)
-classification = classify_sentence(prompt)
-'''
 
 e = 0
 n = 0
 y = 0
+nc = 0
+yc = 0
 
 
-with open("Results/resultsSplit.txt", "w") as file:
+with open("Results/resultsSplitBLOOM.txt", "w") as file:
+    file.write("Text" + "\t" + "class_label" + "\t" + "classification" + "\n")
     for i, r in test_dataset.iterrows():
         sampled_examples_yes = random.sample(list_examples_yes, 3)
         sampled_examples_no = random.sample(list_examples_no, 3)
@@ -85,8 +73,15 @@ with open("Results/resultsSplit.txt", "w") as file:
             y += 1
         if classification == "No":
             n += 1
+        if classification == "No" and classification == r.class_label:
+            nc += 1
+        if classification == "Yes" and classification == r.class_label:
+            yc += 1
         file.write(r.Text + "\t" + r.class_label + "\t" + classification + "\n")
 
 print("number of errors: ", e)
+print("number correct: ", 318-e)
 print("number yes: ", y)
-print("number of no: ", n)
+print("number no: ", n)
+print("number correct yes: ", yc)
+print("number correct no: ", nc)

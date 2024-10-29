@@ -7,20 +7,21 @@ import pandas as pd
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 print(device)
 torch.cuda.empty_cache()
-#optimizer = torch.optim.SGD
 
 train_dataset = pd.read_csv("Data/CT24_checkworthy_english_dev.tsv", dtype=object, encoding="utf-8", sep='\t')
 test_dataset = pd.read_csv("Data/CT24_checkworthy_english_dev-test.tsv", dtype=object, encoding="utf-8", sep='\t')
 
 # Load a model and tokenizer
-tokenizer = AutoTokenizer.from_pretrained("bigscience/bloom")
-model = AutoModelForCausalLM.from_pretrained("bigscience/bloom")
+tokenizer = AutoTokenizer.from_pretrained("openai-community/gpt2")
+model = AutoModelForCausalLM.from_pretrained("openai-community/gpt2")
 
 
 def create_prompt(new_sentence, examples):
     prompt = "A check-worthy sentence contains a claim that can be fact-checked. If a sentence is check-worthy " \
              "classify it as yes, if not classify it as no. Classify the following sentences into one of the " \
              "categories: Yes, No.\n "
+    for i, example in enumerate(examples):
+        prompt += f"{i + 1}. Sentence: \"{example['Text']}\"\n   Classification: {example['class_label']}\n"
     prompt += f"\nNow classify the following sentence:\nSentence: \"{new_sentence}\"\nClassification:"
     return prompt
 
@@ -31,6 +32,7 @@ def classify_sentence(prompt):
 
     # Decode the generated text
     generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
+
     # Extract the classification from the generated text
     classification = generated_text.split('Classification:')[-1].strip().split()[0]
     return classification
@@ -50,7 +52,7 @@ y = 0
 nc = 0
 yc = 0
 
-with open("Results/resultsBasicBLOOM.txt", "w") as file:
+with open("Results/resultsExampleGPT2.txt", "w") as file:
     file.write("Text" + "\t" + "class_label" + "\t" + "classification" + "\n")
     for i, r in test_dataset.iterrows():
         sampled_examples = random.sample(list_examples, 3)

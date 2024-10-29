@@ -7,14 +7,13 @@ import pandas as pd
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 print(device)
 torch.cuda.empty_cache()
-#optimizer = torch.optim.SGD
 
 train_dataset = pd.read_csv("Data/CT24_checkworthy_english_dev.tsv", dtype=object, encoding="utf-8", sep='\t')
 test_dataset = pd.read_csv("Data/CT24_checkworthy_english_dev-test.tsv", dtype=object, encoding="utf-8", sep='\t')
 
 # Load a model and tokenizer
-tokenizer = AutoTokenizer.from_pretrained("bigscience/bloom")
-model = AutoModelForCausalLM.from_pretrained("bigscience/bloom")
+tokenizer = AutoTokenizer.from_pretrained("openai-community/gpt2")
+model = AutoModelForCausalLM.from_pretrained("openai-community/gpt2")
 
 
 def create_prompt(new_sentence, examples):
@@ -50,7 +49,7 @@ y = 0
 nc = 0
 yc = 0
 
-with open("Results/resultsBasicBLOOM.txt", "w") as file:
+with open("Results/resultsBasicGPT2.txt", "w") as file:
     file.write("Text" + "\t" + "class_label" + "\t" + "classification" + "\n")
     for i, r in test_dataset.iterrows():
         sampled_examples = random.sample(list_examples, 3)
