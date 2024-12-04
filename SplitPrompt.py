@@ -9,17 +9,19 @@ print(device)
 torch.cuda.empty_cache()
 
 train_dataset = pd.read_csv("Data/CT24_checkworthy_english_dev.tsv", dtype=object, encoding="utf-8", sep='\t')
-test_dataset = pd.read_csv("Data/CT24_checkworthy_english_dev-test.tsv", dtype=object, encoding="utf-8", sep='\t')
+test_dataset = pd.read_csv("Data/CT24_checkworthy_english_dev-test-balanced.tsv", dtype=object, encoding="utf-8",
+                           sep='\t')
 
 # Load a model and tokenizer
-tokenizer = AutoTokenizer.from_pretrained("bigscience/bloom")
-model = AutoModelForCausalLM.from_pretrained("bigscience/bloom")
+tokenizer = AutoTokenizer.from_pretrained("openai-community/gpt2")
+model = AutoModelForCausalLM.from_pretrained("openai-community/gpt2")
 
 
 def create_prompt(new_sentence, examples_yes, examples_no):
     prompt = "A check-worthy sentence contains a claim that can be fact-checked. If a sentence is check-worthy " \
              "classify it as yes, if not classify it as no. Classify the following sentences into one of the " \
-             "categories: Yes, No.\n Examples of no are: "
+             "categories: No, Yes.\n "
+    prompt += "Examples of no are: "
     for i, example in enumerate(examples_no):
         prompt += f"{i + 1}. Sentence: \"{example['Text']}\"\n   Classification: {example['class_label']}\n"
     prompt += "Examples of yes are: "
@@ -38,8 +40,13 @@ def classify_sentence(prompt):
     generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
 
     # Extract the classification from the generated text
-    classification = generated_text.split('Classification:')[-1].strip().split()[0]
-    return classification
+    classified = generated_text.split('Classification:')[-1].strip().split()[0]
+    if "Yes" in classified:
+        return "Yes"
+    elif "No" in classified:
+        return "No"
+    else:
+        return "unknown - " + generated_text.split('Classification:')[-1].strip().split()[0]
 
 
 list_examples_yes = []
@@ -52,19 +59,17 @@ for i, r in train_dataset.iterrows():
     if r.class_label == "No":
         list_examples_no.append(new_sentence)
 
-
 e = 0
 n = 0
 y = 0
 nc = 0
 yc = 0
 
-
-with open("Results/resultsSplitBLOOM.txt", "w") as file:
+with open("Results/resultsSplitGPT1.txt", "w") as file:
     file.write("Text" + "\t" + "class_label" + "\t" + "classification" + "\n")
     for i, r in test_dataset.iterrows():
-        sampled_examples_yes = random.sample(list_examples_yes, 3)
-        sampled_examples_no = random.sample(list_examples_no, 3)
+        sampled_examples_yes = random.sample(list_examples_yes, 10)
+        sampled_examples_no = random.sample(list_examples_no, 10)
         prompt = create_prompt(r.Text, sampled_examples_yes, sampled_examples_no)
         classification = classify_sentence(prompt)
         if classification != r.class_label:
@@ -80,7 +85,7 @@ with open("Results/resultsSplitBLOOM.txt", "w") as file:
         file.write(r.Text + "\t" + r.class_label + "\t" + classification + "\n")
 
 print("number of errors: ", e)
-print("number correct: ", 318-e)
+print("number correct: ", yc + nc)
 print("number yes: ", y)
 print("number no: ", n)
 print("number correct yes: ", yc)
